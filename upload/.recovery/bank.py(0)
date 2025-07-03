@@ -1,0 +1,218 @@
+from flask import Blueprint, jsonify, request, session
+from src.models.bank import BankDatabase
+import os
+
+bank_bp = Blueprint('bank', __name__)
+db = BankDatabase()
+
+@bank_bp.route('/login', methods=['POST'])
+def login():
+    """Admin login endpoint"""
+    try:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        table_name = data.get('table_name', 'bank_transactions')
+        
+        if not username or not password:
+            return jsonify({'error': 'Username and password are required'}), 400
+        
+        if db.authenticate_user(username, password):
+            # Create table if it doesn't exist
+            db.create_table_if_not_exists(table_name)
+            
+            # Store session info
+            session['authenticated'] = True
+            session['table_name'] = table_name
+            
+            return jsonify({
+                'success': True,
+                'message': 'Login successful',
+                'table_name': table_name
+            }), 200
+        else:
+            return jsonify({'error': 'Invalid credentials'}), 401
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/logout', methods=['POST'])
+def logout():
+    """Logout endpoint"""
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
+
+@bank_bp.route('/check-user', methods=['POST'])
+def check_user():
+    """Check if user exists and get user info"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        aadhar_no = data.get('aadhar_no')
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        if not aadhar_no:
+            return jsonify({'error': 'Aadhar number is required'}), 400
+        
+        user_record = db.get_user_latest_record(table_name, int(aadhar_no))
+        
+        if user_record:
+            return jsonify({
+                'exists': True,
+                'user_info': user_record
+            }), 200
+        else:
+            return jsonify({
+                'exists': False,
+                'message': 'User not found'
+            }), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/create-user', methods=['POST'])
+def create_user():
+    """Create a new user"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        required_fields = ['aadhar_no', 'name_of_user', 'address', 'phone_no', 'nominee_aadhar_no', 'balance']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Check if user already exists
+        existing_user = db.get_user_latest_record(table_name, int(data['aadhar_no']))
+        if existing_user:
+            return jsonify({'error': 'User with this Aadhar number already exists'}), 400
+        
+        user_data = {
+            'aadhar_no': int(data['aadhar_no']),
+            'name_of_user': data['name_of_user'],
+            'address': data['address'],
+            'phone_no': int(data['phone_no']),
+            'nominee_aadhar_no': int(data['nominee_aadhar_no']),
+            'balance': int(data['balance']),
+            'withdrawal': int(data.get('withdrawal', 0)),
+            'deposit': int(data.get('deposit', 0))
+        }
+        
+        success = db.create_user(table_name, user_data)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'User created successfully'
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create user'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/deposit', methods=['POST'])
+def deposit():
+    """Process deposit transaction"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        aadhar_no = data.get('aadhar_no')
+        deposit_amount = data.get('amount')
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        if not aadhar_no or not deposit_amount:
+            return jsonify({'error': 'Aadhar number and amount are required'}), 400
+        
+        if deposit_amount <= 0:
+            return jsonify({'error': 'Deposit amount must be positive'}), 400
+        
+        result = db.deposit_amount(table_name, int(aadhar_no), int(deposit_amount))
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/withdraw', methods=['POST'])
+def withdraw():
+    """Process withdrawal transaction"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        aadhar_no = data.get('aadhar_no')
+        withdrawal_amount = data.get('amount')
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        if not aadhar_no or not withdrawal_amount:
+            return jsonify({'error': 'Aadhar number and amount are required'}), 400
+        
+        if withdrawal_amount <= 0:
+            return jsonify({'error': 'Withdrawal amount must be positive'}), 400
+        
+        result = db.withdraw_amount(table_name, int(aadhar_no), int(withdrawal_amount))
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/mini-statement', methods=['POST'])
+def mini_statement():
+    """Get mini statement for a user"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        aadhar_no = data.get('aadhar_no')
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        if not aadhar_no:
+            return jsonify({'error': 'Aadhar number is required'}), 400
+        
+        result = db.get_mini_statement(table_name, int(aadhar_no))
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/balance-enquiry', methods=['POST'])
+def balance_enquiry():
+    """Get balance enquiry for a user"""
+    try:
+        if not session.get('authenticated'):
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        data = request.get_json()
+        aadhar_no = data.get('aadhar_no')
+        table_name = session.get('table_name', 'bank_transactions')
+        
+        if not aadhar_no:
+            return jsonify({'error': 'Aadhar number is required'}), 400
+        
+        result = db.get_balance_enquiry(table_name, int(aadhar_no))
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bank_bp.route('/session-status', methods=['GET'])
+def session_status():
+    """Check session status"""
+    return jsonify({
+        'authenticated': session.get('authenticated', False),
+        'table_name': session.get('table_name')
+    }), 200
+

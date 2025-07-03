@@ -1,0 +1,16 @@
+{
+  "name": "royal-bank-frontend",
+  "version": "1.0.0",
+  "description": "Royal Bank of India Frontend Application",
+  "main": "public/index.html",
+  "scripts": {
+    "start": "python3 -m http.server 3000 --directory public",
+    "dev": "python3 -m http.server 3000 --directory public",
+    "build": "echo 'Build complete - static files ready'",
+    "serve": "python3 -m http.server 3000 --directory public"
+  },
+  "keywords": ["banking", "react", "frontend"],
+  "author": "Royal Bank of India",
+  "license": "MIT"
+}
+

@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Bank of India</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 300px;
+            padding: 16px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .toast.success {
+            background-color: #10b981;
+        }
+        
+        .toast.error {
+            background-color: #ef4444;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Toast notification component
+        const Toast = ({ message, type, onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+            
+            return (
+                <div className={`toast ${type}`}>
+                    <div className="flex items-center justify-between">
+                        <span>{message}</span>
+                        <button onClick={onClose} className="ml-4 text-white hover:text-gray-200">
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Loading component
+        const Loading = () => (
+            <div className="flex items-center justify-center">
+                <div className="loading-spinner"></div>
+                <span className="ml-2">Loading...</span>
+            </div>
+        );
+        
+        // Login component
+        const Login = ({ onLogin }) => {
+            const [formData, setFormData] = useState({
+                username: '',
+                password: '',
+                table_name: 'bank_transactions'
+            });
+            const [loading, setLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setToast({ message: 'Login successful!', type: 'success' });
+                        setTimeout(() => onLogin(data.table_name), 1000);
+                    } else {
+                        setToast({ message: data.error || 'Login failed', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error. Please try again.', type: 'error' });
+                }
+                
+                setLoading(false);
+            };
+            
+            return (
+                <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
+                    {toast && (
+                        <Toast 
+                            message={toast.message} 
+                            type={toast.type} 
+                            onClose={() => setToast(null)} 
+                        />
+                    )}
+                    
+                    <div className="bg-white rounded-2xl card-shadow p-8 w-full max-w-md animate-fade-in">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i className="fas fa-university text-white text-2xl"></i>
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-800">Royal Bank of India</h1>
+                            <p className="text-gray-600 mt-2">Admin Portal</p>
+                        </div>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Username
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.username}
+                                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter username"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Password
+                                </label>
+                                <input
+                                    type="password"
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter password"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Table Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.table_name}
+                                    onChange={(e) => setFormData({...formData, table_name: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter table name"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full btn-primary text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? <Loading /> : 'Login'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Dashboard component
+        const Dashboard = ({ tableName, onLogout }) => {
+            const [currentView, setCurrentView] = useState('dashboard');
+            const [userInfo, setUserInfo] = useState(null);
+            const [aadharNo, setAadharNo] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [toast, setToast] = useState(null);
+            
+            const menuItems = [
+                { id: 'dashboard', icon: 'fas fa-tachometer-alt', label: 'Dashboard' },
+                { id: 'check-user', icon: 'fas fa-user-search', label: 'Check User' },
+                { id: 'create-user', icon: 'fas fa-user-plus', label: 'Create User' },
+                { id: 'deposit', icon: 'fas fa-plus-circle', label: 'Deposit' },
+                { id: 'withdraw', icon: 'fas fa-minus-circle', label: 'Withdraw' },
+                { id: 'mini-statement', icon: 'fas fa-file-alt', label: 'Mini Statement' },
+                { id: 'balance-enquiry', icon: 'fas fa-balance-scale', label: 'Balance Enquiry' }
+            ];
+            
+            const handleLogout = async () => {
+                try {
+                    await fetch('/api/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    onLogout();
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    onLogout();
+                }
+            };
+            
+            const checkUser = async () => {
+                if (!aadharNo) {
+                    setToast({ message: 'Please enter Aadhar number', type: 'error' });
+                    return;
+                }
+                
+                setLoading(true);
+                try {
+                    const response = await fetch('/api/check-user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ aadhar_no: aadharNo })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        if (data.exists) {
+                            setUserInfo(data.user_info);
+                            setToast({ message: 'User found!', type: 'success' });
+                        } else {
+                            setUserInfo(null);
+                            setToast({ message: 'User not found', type: 'error' });
+                        }
+                    } else {
+                        setToast({ message: data.error || 'Failed to check user', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            const renderContent = () => {
+                switch (currentView) {
+                    case 'dashboard':
+                        return <DashboardHome tableName={tableName} />;
+                    case 'check-user':
+                        return <CheckUser onUserFound={setUserInfo} setToast={setToast} />;
+                    case 'create-user':
+                        return <CreateUser setToast={setToast} />;
+                    case 'deposit':
+                        return <Deposit setToast={setToast} />;
+                    case 'withdraw':
+                        return <Withdraw setToast={setToast} />;
+                    case 'mini-statement':
+                        return <MiniStatement setToast={setToast} />;
+                    case 'balance-enquiry':
+                        return <BalanceEnquiry setToast={setToast} />;
+                    default:
+                        return <DashboardHome tableName={tableName} />;
+                }
+            };
+            
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    {toast && (
+                        <Toast 
+                            message={toast.message} 
+                            type={toast.type} 
+                            onClose={() => setToast(null)} 
+                        />
+                    )}
+                    
+                    {/* Header */}
+                    <header className="bg-white shadow-sm border-b">
+                        <div className="flex items-center justify-between px-6 py-4">
+                            <div className="flex items-center">
+                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i className="fas fa-university text-white"></i>
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold text-gray-800">Royal Bank of India</h1>
+                                    <p className="text-sm text-gray-600">Table: {tableName}</p>
+                                </div>
+                            </div>
+                            
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                            >
+                                <i className="fas fa-sign-out-alt mr-2"></i>
+                                Logout
+                            </button>
+                        </div>
+                    </header>
+                    
+                    <div className="flex">
+                        {/* Sidebar */}
+                        <aside className="w-64 bg-white shadow-sm min-h-screen">
+                            <nav className="p-4">
+                                <ul className="space-y-2">
+                                    {menuItems.map((item) => (
+                                        <li key={item.id}>
+                                            <button
+                                                onClick={() => setCurrentView(item.id)}
+                                                className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${
+                                                    currentView === item.id
+                                                        ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                                                        : 'text-gray-600 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <i className={`${item.icon} mr-3`}></i>
+                                                {item.label}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </nav>
+                        </aside>
+                        
+                        {/* Main Content */}
+                        <main className="flex-1 p-6">
+                            {renderContent()}
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Dashboard Home component
+        const DashboardHome = ({ tableName }) => (
+            <div className="animate-fade-in">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-white rounded-xl p-6 card-shadow">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-users text-blue-600 text-xl"></i>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm text-gray-600">Active Table</p>
+                                <p className="text-xl font-bold text-gray-800">{tableName}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-plus-circle text-green-600 text-xl"></i>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm text-gray-600">Deposits</p>
+                                <p className="text-xl font-bold text-gray-800">Available</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-minus-circle text-red-600 text-xl"></i>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm text-gray-600">Withdrawals</p>
+                                <p className="text-xl font-bold text-gray-800">Available</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i className="fas fa-file-alt text-purple-600 text-xl"></i>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm text-gray-600">Statements</p>
+                                <p className="text-xl font-bold text-gray-800">Ready</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="bg-white rounded-xl p-6 card-shadow">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors cursor-pointer">
+                            <i className="fas fa-user-search text-blue-600 text-2xl mb-2"></i>
+                            <h4 className="font-medium text-gray-800">Check User</h4>
+                            <p className="text-sm text-gray-600">Search for existing users</p>
+                        </div>
+                        
+                        <div className="p-4 border border-gray-200 rounded-lg hover:border-green-300 transition-colors cursor-pointer">
+                            <i className="fas fa-plus-circle text-green-600 text-2xl mb-2"></i>
+                            <h4 className="font-medium text-gray-800">Deposit Money</h4>
+                            <p className="text-sm text-gray-600">Process deposits</p>
+                        </div>
+                        
+                        <div className="p-4 border border-gray-200 rounded-lg hover:border-purple-300 transition-colors cursor-pointer">
+                            <i className="fas fa-balance-scale text-purple-600 text-2xl mb-2"></i>
+                            <h4 className="font-medium text-gray-800">Check Balance</h4>
+                            <p className="text-sm text-gray-600">View account balance</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+        
+        // Check User component
+        const CheckUser = ({ onUserFound, setToast }) => {
+            const [aadharNo, setAadharNo] = useState('');
+            const [userInfo, setUserInfo] = useState(null);
+            const [loading, setLoading] = useState(false);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!aadharNo) {
+                    setToast({ message: 'Please enter Aadhar number', type: 'error' });
+                    return;
+                }
+                
+                setLoading(true);
+                try {
+                    const response = await fetch('/api/check-user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ aadhar_no: aadharNo })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        if (data.exists) {
+                            setUserInfo(data.user_info);
+                            setToast({ message: 'User found!', type: 'success' });
+                        } else {
+                            setUserInfo(null);
+                            setToast({ message: 'User not found', type: 'error' });
+                        }
+                    } else {
+                        setToast({ message: data.error || 'Failed to check user', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Check User</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow mb-6">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Aadhar Number
+                                </label>
+                                <input
+                                    type="text"
+                                    value={aadharNo}
+                                    onChange={(e) => setAadharNo(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter 12-digit Aadhar number"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Check User'}
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {userInfo && (
+                        <div className="bg-white rounded-xl p-6 card-shadow">
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">User Information</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-600">Name</p>
+                                    <p className="font-medium text-gray-800">{userInfo.name_of_user}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Aadhar Number</p>
+                                    <p className="font-medium text-gray-800">{userInfo.aadhar_no}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Phone Number</p>
+                                    <p className="font-medium text-gray-800">{userInfo.phone_no}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Current Balance</p>
+                                    <p className="font-medium text-green-600">₹{userInfo.balance}</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <p className="text-sm text-gray-600">Address</p>
+                                    <p className="font-medium text-gray-800">{userInfo.address}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Create User component
+        const CreateUser = ({ setToast }) => {
+            const [formData, setFormData] = useState({
+                aadhar_no: '',
+                name_of_user: '',
+                address: '',
+                phone_no: '',
+                nominee_aadhar_no: '',
+                balance: '',
+                withdrawal: '0',
+                deposit: '0'
+            });
+            const [loading, setLoading] = useState(false);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/create-user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setToast({ message: 'User created successfully!', type: 'success' });
+                        setFormData({
+                            aadhar_no: '',
+                            name_of_user: '',
+                            address: '',
+                            phone_no: '',
+                            nominee_aadhar_no: '',
+                            balance: '',
+                            withdrawal: '0',
+                            deposit: '0'
+                        });
+                    } else {
+                        setToast({ message: data.error || 'Failed to create user', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Create New User</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Full Name *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.name_of_user}
+                                        onChange={(e) => setFormData({...formData, name_of_user: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="Enter full name"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Aadhar Number *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.aadhar_no}
+                                        onChange={(e) => setFormData({...formData, aadhar_no: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="12-digit Aadhar number"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Phone Number *
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={formData.phone_no}
+                                        onChange={(e) => setFormData({...formData, phone_no: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="10-digit phone number"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Nominee Aadhar Number *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={formData.nominee_aadhar_no}
+                                        onChange={(e) => setFormData({...formData, nominee_aadhar_no: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="Nominee's Aadhar number"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Address *
+                                    </label>
+                                    <textarea
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="Enter complete address"
+                                        rows="3"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Initial Balance *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.balance}
+                                        onChange={(e) => setFormData({...formData, balance: e.target.value})}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        placeholder="Enter initial balance"
+                                        min="0"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Create User'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+        
+        // Deposit component
+        const Deposit = ({ setToast }) => {
+            const [formData, setFormData] = useState({
+                aadhar_no: '',
+                amount: ''
+            });
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/deposit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setResult(data);
+                        setToast({ message: 'Deposit successful!', type: 'success' });
+                        setFormData({ aadhar_no: '', amount: '' });
+                    } else {
+                        setToast({ message: data.error || 'Deposit failed', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Deposit Money</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow mb-6">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Aadhar Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.aadhar_no}
+                                    onChange={(e) => setFormData({...formData, aadhar_no: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter Aadhar number"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Deposit Amount *
+                                </label>
+                                <input
+                                    type="number"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter amount to deposit"
+                                    min="1"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Process Deposit'}
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {result && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-green-800 mb-4">Deposit Successful</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-green-600">Deposit Amount</p>
+                                    <p className="font-medium text-green-800">₹{result.deposit_amount}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-green-600">New Balance</p>
+                                    <p className="font-medium text-green-800">₹{result.new_balance}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Withdraw component
+        const Withdraw = ({ setToast }) => {
+            const [formData, setFormData] = useState({
+                aadhar_no: '',
+                amount: ''
+            });
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/withdraw', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setResult(data);
+                        setToast({ message: 'Withdrawal successful!', type: 'success' });
+                        setFormData({ aadhar_no: '', amount: '' });
+                    } else {
+                        setToast({ message: data.error || 'Withdrawal failed', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Withdraw Money</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow mb-6">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Aadhar Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.aadhar_no}
+                                    onChange={(e) => setFormData({...formData, aadhar_no: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter Aadhar number"
+                                    required
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Withdrawal Amount *
+                                </label>
+                                <input
+                                    type="number"
+                                    value={formData.amount}
+                                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter amount to withdraw"
+                                    min="1"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Process Withdrawal'}
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {result && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-red-800 mb-4">Withdrawal Successful</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-red-600">Withdrawal Amount</p>
+                                    <p className="font-medium text-red-800">₹{result.withdrawal_amount}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-red-600">Remaining Balance</p>
+                                    <p className="font-medium text-red-800">₹{result.new_balance}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Mini Statement component
+        const MiniStatement = ({ setToast }) => {
+            const [aadharNo, setAadharNo] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [statement, setStatement] = useState(null);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/mini-statement', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ aadhar_no: aadharNo })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setStatement(data);
+                        setToast({ message: 'Statement generated successfully!', type: 'success' });
+                    } else {
+                        setToast({ message: data.error || 'Failed to generate statement', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Mini Statement</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow mb-6">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Aadhar Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={aadharNo}
+                                    onChange={(e) => setAadharNo(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter Aadhar number"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Generate Statement'}
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {statement && (
+                        <div className="bg-white rounded-xl p-6 card-shadow">
+                            <div className="text-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-800">ROYAL BANK OF INDIA</h3>
+                                <p className="text-gray-600">Mini Statement</p>
+                                <p className="text-sm text-gray-500">Generated on: {statement.current_time}</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p className="text-sm text-gray-600">Account Holder</p>
+                                    <p className="font-medium text-gray-800">{statement.user_info.name_of_user}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Aadhar Number</p>
+                                    <p className="font-medium text-gray-800">{statement.user_info.aadhar_no}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Phone Number</p>
+                                    <p className="font-medium text-gray-800">{statement.user_info.phone_no}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Current Balance</p>
+                                    <p className="font-medium text-green-600">₹{statement.user_info.balance}</p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 className="text-lg font-semibold text-gray-800 mb-4">Transaction History</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="text-left py-2 text-gray-600">Date</th>
+                                                <th className="text-right py-2 text-gray-600">Withdrawal</th>
+                                                <th className="text-right py-2 text-gray-600">Deposit</th>
+                                                <th className="text-right py-2 text-gray-600">Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {statement.transactions.map((transaction, index) => (
+                                                <tr key={index} className="border-b">
+                                                    <td className="py-2 text-gray-800">{transaction.date}</td>
+                                                    <td className="py-2 text-right text-red-600">
+                                                        {transaction.withdrawal > 0 ? `₹${transaction.withdrawal}` : '-'}
+                                                    </td>
+                                                    <td className="py-2 text-right text-green-600">
+                                                        {transaction.deposit > 0 ? `₹${transaction.deposit}` : '-'}
+                                                    </td>
+                                                    <td className="py-2 text-right font-medium text-gray-800">₹{transaction.balance}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Balance Enquiry component
+        const BalanceEnquiry = ({ setToast }) => {
+            const [aadharNo, setAadharNo] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [balance, setBalance] = useState(null);
+            
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                
+                try {
+                    const response = await fetch('/api/balance-enquiry', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({ aadhar_no: aadharNo })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        setBalance(data);
+                        setToast({ message: 'Balance retrieved successfully!', type: 'success' });
+                    } else {
+                        setToast({ message: data.error || 'Failed to get balance', type: 'error' });
+                    }
+                } catch (error) {
+                    setToast({ message: 'Network error', type: 'error' });
+                }
+                setLoading(false);
+            };
+            
+            return (
+                <div className="animate-fade-in">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6">Balance Enquiry</h2>
+                    
+                    <div className="bg-white rounded-xl p-6 card-shadow mb-6">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Aadhar Number *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={aadharNo}
+                                    onChange={(e) => setAadharNo(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    placeholder="Enter Aadhar number"
+                                    required
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn-primary text-white py-3 px-6 rounded-lg font-medium disabled:opacity-50"
+                            >
+                                {loading ? <Loading /> : 'Check Balance'}
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {balance && (
+                        <div className="bg-white rounded-xl p-6 card-shadow">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i className="fas fa-balance-scale text-white text-2xl"></i>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Account Balance</h3>
+                                <p className="text-gray-600 mb-4">As of {balance.current_time}</p>
+                                
+                                <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6 mb-4">
+                                    <p className="text-sm text-gray-600 mb-1">Account Holder</p>
+                                    <p className="text-lg font-semibold text-gray-800 mb-3">{balance.name}</p>
+                                    
+                                    <p className="text-sm text-gray-600 mb-1">Current Balance</p>
+                                    <p className="text-3xl font-bold text-green-600">₹{balance.balance}</p>
+                                </div>
+                                
+                                <p className="text-xs text-gray-500">Aadhar: {balance.aadhar_no}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        // Main App component
+        const App = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [tableName, setTableName] = useState('');
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                // Check session status on app load
+                fetch('/api/session-status', {
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated) {
+                        setIsAuthenticated(true);
+                        setTableName(data.table_name);
+                    }
+                })
+                .catch(error => {
+                    console.error('Session check error:', error);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+            }, []);
+            
+            const handleLogin = (table) => {
+                setIsAuthenticated(true);
+                setTableName(table);
+            };
+            
+            const handleLogout = () => {
+                setIsAuthenticated(false);
+                setTableName('');
+            };
+            
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <Loading />
+                    </div>
+                );
+            }
+            
+            return (
+                <div>
+                    {isAuthenticated ? (
+                        <Dashboard tableName={tableName} onLogout={handleLogout} />
+                    ) : (
+                        <Login onLogin={handleLogin} />
+                    )}
+                </div>
+            );
+        };
+        
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+
